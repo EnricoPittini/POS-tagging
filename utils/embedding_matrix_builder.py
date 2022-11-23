@@ -1,15 +1,15 @@
 import numpy as np
 
-from typing import List
+from typing import List, Dict
 
-def build_embedding_matrix(vocabulary : List[str], GLOVE_embeddings : dict, embedding_dimension : int = 50):
+def build_embedding_matrix(vocabulary : List[str], GLOVE_embeddings : Dict[str][np.array], embedding_dimension : int = 50):
     """Build the embedding matrix from the given vocabulary and the GLOVE embeddings,
 
     Parameters
     ----------
     vocabulary : List[str]
         List of strings, representing the vocabulary: mapping integers -> word types.
-    GLOVE_embeddings : dict
+    GLOVE_embeddings : Dict[str][np.array]
         Dictionary mapping word types into embedding vectors.
     embedding_dimension : int, optional
         Dimension of the embedding, by default 50
