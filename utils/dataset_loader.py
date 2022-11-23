@@ -1,16 +1,33 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import string
 import os
 
-def _build_dataset_from_files_list(file_name_list, divide_by_sentence=True, remove_punctuation=True):
-    dataset_texts = []
-    dataset_labels = []
+def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentence : bool = True):
+    """Build the dataset from the given list of documents.
+
+    Parameters
+    ----------
+    file_name_list : List[str]
+        List of the documents path names
+    divide_by_sentence : bool, optional
+        Whether to divide the texts by sentences or by documents, by default True
+
+    Returns
+    -------
+    texts : list of str
+        List of strings, representing the sentences/documents, i.e. sequence of words.
+    labels : list of str
+        List of strings, where each string contains the sequence of POS tags for the words in the corresponding 
+        sentence/document.
+    """
+    texts = []
+    labels = []
 
     if not divide_by_sentence:  # Divide by documents
         for document_index, file_name in enumerate(file_name_list):
-            dataset_texts.append([])
-            dataset_labels.append([])
+            texts.append([])
+            labels.append([])
             with open(file_name) as f:
                 for line in f:
                     split_line = line.split('\t')
@@ -18,15 +35,13 @@ def _build_dataset_from_files_list(file_name_list, divide_by_sentence=True, remo
                         continue
                     word, label, _ = split_line
                     word = word.lower()
-                    if remove_punctuation and all([c in string.punctuation for c in word]):  # TODO improve this check
-                        continue
-                    dataset_texts[document_index].append(word)
-                    dataset_labels[document_index].append(label)
+                    texts[document_index].append(word)
+                    labels[document_index].append(label)
 
     else:  # Divide by sentences
         document_index = 0
-        dataset_texts.append([])
-        dataset_labels.append([])
+        texts.append([])
+        labels.append([])
         for file_name in file_name_list:
             with open(file_name) as f:
                 for line in f:
@@ -35,41 +50,59 @@ def _build_dataset_from_files_list(file_name_list, divide_by_sentence=True, remo
                         continue
                     word, label, _ = split_line
                     word = word.lower()
-                    if remove_punctuation and all([c in string.punctuation for c in word]):  # TODO improve this check
-                        if divide_by_sentence and word in ['.', '!', '?']:
-                            dataset_texts.append([])
-                            dataset_labels.append([])
-                            document_index += 1
-                        continue
-                    dataset_texts[document_index].append(word)
-                    dataset_labels[document_index].append(label)
-        dataset_texts = dataset_texts[:-1]
-        dataset_labels = dataset_labels[:-1]
+                    texts[document_index].append(word)
+                    labels[document_index].append(label)
+                    if word in ['.', '!', '?']:  # End of the sentence
+                        texts.append([])
+                        labels.append([])
+                        document_index += 1
+        texts = texts[:-1]
+        labels = labels[:-1]
 
-    dataset_texts = [' '.join(list_of_words) for list_of_words in  dataset_texts]
-    dataset_labels = [' '.join(list_of_labels) for list_of_labels in  dataset_labels]
-    return dataset_texts, dataset_labels
+    texts = [' '.join(list_of_words) for list_of_words in  texts]
+    labels = [' '.join(list_of_labels) for list_of_labels in  labels]
 
-def load_datasets(folder_path: str, split_range: Tuple[int,int] = (100, 150), divide_by_sentence: bool = True,
-                  remove_punctuation: bool = True):
+    return texts, labels
+
+def load_datasets(folder_path: str, split_range: Tuple[int,int] = (100, 150), divide_by_sentence: bool = True):
+    """Load the train-val-test datasets.
+
+    Parameters
+    ----------
+    folder_path : str
+        Path containing the documents.
+    split_range : Tuple[int,int], optional
+        Tuple specifying the last training document index and the last validation document index, by default (100, 150)
+    divide_by_sentence : bool, optional
+        Whether to divide the texts by sentences or by documents, by default True
+
+    Returns
+    -------
+    (texts_train, labels_train) : tuple
+        `texts_train` is a list of strings, where each string is a sentence/document, i.e. sequence of words.
+        `labels_train` is a list of strings, where each string contains the sequence of POS tags for the words in the 
+        corresponding sentence/document.
+    (texts_val, labels_val) : tuple
+        `texts_val` is a list of strings, where each string is a sentence/document, i.e. sequence of words.
+        `labels_val` is a list of strings, where each string contains the sequence of POS tags for the words in the 
+        corresponding sentence/document.
+    (texts_test, labels_test) : tuple
+        `texts_test` is a list of strings, where each string is a sentence/document, i.e. sequence of words.
+        `labels_test` is a list of strings, where each string contains the sequence of POS tags for the words in the 
+        corresponding sentence/document.
+    """
     # TODO regex
-    file_name_list = sorted([os.path.join(folder_path,file_name) for file_name in os.listdir('dataset') if 'wsj' in file_name and '.dp' in file_name])
+    file_name_list = sorted([os.path.join(folder_path,file_name) 
+                            for file_name in os.listdir('dataset') if 'wsj' in file_name and '.dp' in file_name])
 
     file_name_list_train = file_name_list[0:split_range[0]]
     file_name_list_val = file_name_list[split_range[0]:split_range[1]]
     file_name_list_test = file_name_list[split_range[1]:]
 
-    dataset_documents_train, dataset_labels_train = _build_dataset_from_files_list(file_name_list_train, 
-                                                                                   remove_punctuation=remove_punctuation,
-                                                                                   divide_by_sentence=divide_by_sentence)
-    dataset_documents_val, dataset_labels_val = _build_dataset_from_files_list(file_name_list_val, 
-                                                                                   remove_punctuation=remove_punctuation,
-                                                                                   divide_by_sentence=divide_by_sentence)
-    dataset_documents_test, dataset_labels_test = _build_dataset_from_files_list(file_name_list_test, 
-                                                                                   remove_punctuation=remove_punctuation,
-                                                                                   divide_by_sentence=divide_by_sentence)
+    texts_train, labels_train = _build_dataset_from_files_list(file_name_list_train, divide_by_sentence=divide_by_sentence)
+    texts_val, labels_val = _build_dataset_from_files_list(file_name_list_val, divide_by_sentence=divide_by_sentence)
+    texts_test, labels_test = _build_dataset_from_files_list(file_name_list_test, divide_by_sentence=divide_by_sentence)
 
-    return ((dataset_documents_train, dataset_labels_train), (dataset_documents_val, dataset_labels_val), 
-            (dataset_documents_test, dataset_labels_test))
+    return (texts_train, labels_train), (texts_val, labels_val), (texts_test, labels_test)
 
     
