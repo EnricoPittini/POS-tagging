@@ -23,6 +23,6 @@ def load_glove(folder_path : str, embedding_dim : int = 50):
         GLOVE_embeddings += text
 
     GLOVE_embeddings = [line.split() for line in GLOVE_embeddings if len(line)>0]
-    GLOVE_embeddings = {line[0]:np.array(line[1:]) for line in GLOVE_embeddings}
+    GLOVE_embeddings = {line[0]:np.array(line[1:],dtype=np.float32) for line in GLOVE_embeddings}
 
     return GLOVE_embeddings
