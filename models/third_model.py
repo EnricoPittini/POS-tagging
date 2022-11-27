@@ -38,7 +38,7 @@ def build_third_model(n_classes, embedding_dim=50, embedding_matrix=None, latent
 
     # Final outputs of the model: for each input token, we produce a distribution for predicting its POS tag. 
     # No activation function is used (`SparseCategoricalCrossentropy(from_logits=True)` is used as loss).
-    outputs = ks.layers.Dense(units=n_classes)(h_outputs)
+    outputs = ks.layers.Dense(units=n_classes)(outputs)
 
     model = ks.Model(inputs=inputs, outputs=outputs)
 
