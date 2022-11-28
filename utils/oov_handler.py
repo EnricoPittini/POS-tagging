@@ -67,10 +67,12 @@ def _loss_function(weights, weights_t, bias, bias_t, co_occurence_matrix):
 # top N similar words
 # topN = 5
 
-def train_oov_terms(GLOVE_embeddings: Dict[str, np.ndarray[np.float32]], co_occurrence_matrix: np.ndarray[np.int32], 
-                    token2int: Dict[str, int], int2token: Dict[int, str], embedding_size: int = 50, n_epochs: int = 100):
+def train_oov_terms(GLOVE_embeddings, co_occurrence_matrix, 
+                    token2int, int2token, embedding_size = 50, n_epochs = 100):
     n_tokens = len(token2int)
     
+    n_tokens = len(token2int)
+
     # Variables declaration
     knownIndices = np.array([token2int[key] if key in token2int.keys() else -1 for key in GLOVE_embeddings.keys()], dtype=np.int32)
     knownEmbeddings = np.array([GLOVE_embeddings[int2token[k]] for k in knownIndices[knownIndices!=-1]], dtype=np.float32)
@@ -91,32 +93,33 @@ def train_oov_terms(GLOVE_embeddings: Dict[str, np.ndarray[np.float32]], co_occu
     mask[knownIndices[knownIndices != -1]] = 0
     k_embedding[knownIndices[knownIndices != -1]] = knownEmbeddings.clone().detach()
 
-    with torch.no_grad():
-        if knownIndices is not None:
-            weights = weights*mask + k_embedding
 
     # Set optimizer
-    optimizer=torch.optim.Adam([weights, bias], lr=1)
-    
+    optimizer=torch.optim.Adam([weights, weights_t, bias, bias_t], lr=1)
+
     losses = []
-    
+
     # Training
     for epoch in range(n_epochs):  # loop over the dataset multiple times
         # zero the parameter gradients
+
         optimizer.zero_grad()
 
+        if knownIndices is not None:
+            weights_T=mask*weights_t + (1-mask)* (k_embedding-weights)
+
         # forward + backward + optimize
-        loss = _loss_function(weights, weights_t, bias, bias_t, co_occurrence_matrix)
+        loss = _loss_function(weights, weights_T, bias, bias_t, co_occurrence_matrix)
         loss.backward()
         optimizer.step()
 
-        if knownIndices is not None:
-            with torch.no_grad():
-                weights = weights*mask + k_embedding
         
         losses.append(loss.detach().cpu().numpy())
 
         if epoch % 10 == 9:
             print('epochs:', epoch + 1, 'loss:', loss.detach().cpu().numpy())
-        
-    return weights, losses
+
+    if knownIndices is not None:
+        weights_T=mask*weights_t + (1-mask)* (k_embedding-weights)
+
+    return (weights+weights_T).detach().cpu().numpy(), losses
