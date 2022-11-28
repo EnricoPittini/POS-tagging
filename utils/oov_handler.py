@@ -1,34 +1,19 @@
-from collections import Counter
 import torch
 import numpy as np
 from typing import List, Dict
 
-def _get_co_occurrences(token: str, token2int: Dict[str, int], sentences: List[List[str]], window_size: int) -> Dict[int, int]:
-    # Co-occurrences list for `token`.
-    co_occurrences = []
-    
-    for s in sentences:
-        for idx in [i for i, t in enumerate(s) if t == token]:
-            co_occurrences.extend(s[max(0, idx - window_size) : min(idx + window_size+1, len(s))])
-    
-    # Get indices of the tokens in the co_occurrences
-    co_occurrence_idxs = [token2int[c] for c in co_occurrences]
-    
-    # Get a dictionary of number of occurrences per token and sort it by token index.
-    co_occurence_dict = Counter(co_occurrence_idxs)
-    return dict(sorted(co_occurence_dict.items()))
-
-def get_co_occurrence_matrix(tokens: List[str], token2int: Dict[str, int], sentences: List[List[str]], window_size: int) -> np.ndarray:
+def get_co_occurrence_matrix(tokens: List[str], token2int: Dict[str, int], sentences: List[List[str]], window_size: int = 5) -> np.ndarray:
     n_tokens = len(tokens)
 
     # Create the tokens co-occurence matrix filled with zeros
     co_occurrence_matrix = np.zeros(shape=(n_tokens, n_tokens), dtype=np.int32)
 
-    for token in tokens:
-        co_occurence_dict = _get_co_occurrences(token, token2int, sentences, window_size)
-        token_idx = token2int[token]
-        # Update the co-occurrences of other tokens with the given token
-        co_occurrence_matrix[token_idx, list(co_occurence_dict.keys())] = list(co_occurence_dict.values())
+    for sentence in sentences:
+        for i, token in enumerate(sentence[:-1]):
+            context_token_indices = [token2int[t] for t in sentence[i+1:i+window_size+1]]
+            curr_token_index = token2int[token]
+            co_occurrence_matrix[context_token_indices, curr_token_index] += 1
+            co_occurrence_matrix[curr_token_index, context_token_indices] += 1
 
     # Force co-occurrences between the same tokens at 0.
     np.fill_diagonal(co_occurrence_matrix, 0)
