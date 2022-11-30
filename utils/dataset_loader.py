@@ -3,7 +3,10 @@ from typing import Tuple, List
 import string
 import os
 
-def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentence : bool = True):
+import re
+
+def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentence : bool = True,
+                                   group_numbers : bool = True):
     """Build the dataset from the given list of documents.
 
     Parameters
@@ -12,6 +15,9 @@ def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentenc
         List of the documents path names
     divide_by_sentence : bool, optional
         Whether to divide the texts by sentences or by documents, by default True
+    group_numbers : bool, optional
+        If True, as the default value, the different possible token numbers are grouped into the same special token [num].
+        This makes sense since all the numbers are associated to the same POS tag.
 
     Returns
     -------
@@ -62,9 +68,32 @@ def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentenc
     texts = [' '.join(list_of_words) for list_of_words in  texts]
     labels = [' '.join(list_of_labels) for list_of_labels in  labels]
 
-    return texts, labels
+    if group_numbers:
+        texts = _substitute_numeric(texts)
 
-def load_datasets(folder_path: str, split_range: Tuple[int,int] = (100, 150), divide_by_sentence: bool = True):
+    return texts, labels
+    
+
+def _substitute_numeric(texts):
+    """Substitue each number token into the special token [num].
+
+    Parameters
+    ----------
+    texts : list of str
+
+    Returns
+    -------
+    texts : list of str
+    """
+    # The word is either an integer number or a flaoting point (with either . or ,) or two integers divided by "\/".
+    pattern = '^[0-9]+((\\\\\/|\,|\.)[0-9]*)?$'
+    substitution = '[num]'
+    
+    return [' '.join([re.sub(pattern, substitution, word) for word in sentence.split(' ')]) for sentence in texts]
+
+
+def load_datasets(folder_path: str, split_range: Tuple[int,int] = (100, 150), divide_by_sentence: bool = True,
+                  group_numbers : bool = True):
     """Load the train-val-test datasets.
 
     Parameters
@@ -75,6 +104,9 @@ def load_datasets(folder_path: str, split_range: Tuple[int,int] = (100, 150), di
         Tuple specifying the last training document index and the last validation document index, by default (100, 150)
     divide_by_sentence : bool, optional
         Whether to divide the texts by sentences or by documents, by default True
+    group_numbers : bool, optional
+        If True, as the default value, the different possible token numbers are grouped into the same special token [num].
+        This makes sense since all the numbers are associated to the same POS tag.
 
     Returns
     -------
@@ -99,9 +131,12 @@ def load_datasets(folder_path: str, split_range: Tuple[int,int] = (100, 150), di
     file_name_list_val = file_name_list[split_range[0]:split_range[1]]
     file_name_list_test = file_name_list[split_range[1]:]
 
-    texts_train, labels_train = _build_dataset_from_files_list(file_name_list_train, divide_by_sentence=divide_by_sentence)
-    texts_val, labels_val = _build_dataset_from_files_list(file_name_list_val, divide_by_sentence=divide_by_sentence)
-    texts_test, labels_test = _build_dataset_from_files_list(file_name_list_test, divide_by_sentence=divide_by_sentence)
+    texts_train, labels_train = _build_dataset_from_files_list(file_name_list_train, divide_by_sentence=divide_by_sentence,
+                                                               group_numbers=group_numbers)
+    texts_val, labels_val = _build_dataset_from_files_list(file_name_list_val, divide_by_sentence=divide_by_sentence,
+                                                           group_numbers=group_numbers)
+    texts_test, labels_test = _build_dataset_from_files_list(file_name_list_test, divide_by_sentence=divide_by_sentence,
+                                                             group_numbers=group_numbers)
 
     return (texts_train, labels_train), (texts_val, labels_val), (texts_test, labels_test)
 
