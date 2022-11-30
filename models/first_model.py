@@ -25,7 +25,8 @@ def build_first_model(n_classes, embedding_dim=50, embedding_matrix=None, latent
     V = embedding_matrix.shape[0]  # Vocabulary size
     embeddings =   ks.layers.Embedding(output_dim=embedding_dim, input_dim=V,  
                         weights=embedding_matrix if embedding_matrix is None else [embedding_matrix],
-                        mask_zero=True)(inputs)
+                        mask_zero=True,
+                        trainable=False)(inputs)
 
     # Application of the Bidirectional GRU. We take the full sequence of hidden states `h_outputs`.
     h_outputs, _, _,  = ks.layers.Bidirectional(ks.layers.GRU(units=latent_dim, return_sequences=True, 

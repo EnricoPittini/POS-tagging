@@ -25,7 +25,8 @@ def build_baseline_model(n_classes, embedding_dim=50, embedding_matrix=None, lat
     V = embedding_matrix.shape[0]  # Vocabulary size
     embeddings =   ks.layers.Embedding(output_dim=embedding_dim, input_dim=V,  
                         weights=embedding_matrix if embedding_matrix is None else [embedding_matrix],
-                        mask_zero=True)(inputs)
+                        mask_zero=True,
+                        trainable=False)(inputs)  
 
     # Application of the BiLSTM. We take the full sequence of hidden states `h_outputs`.
     h_outputs, _, _, _, _ = ks.layers.Bidirectional(ks.layers.LSTM(units=latent_dim, return_sequences=True, 
