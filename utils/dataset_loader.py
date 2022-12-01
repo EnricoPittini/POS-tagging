@@ -40,7 +40,7 @@ def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentenc
                     if len(split_line) < 3:
                         continue
                     word, label, _ = split_line
-                    word = word.lower()
+                    word = _preprocess_word(word)
                     texts[document_index].append(word)
                     labels[document_index].append(label)
 
@@ -55,7 +55,7 @@ def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentenc
                     if len(split_line) < 3:
                         continue
                     word, label, _ = split_line
-                    word = word.lower()
+                    word = _preprocess_word(word)
                     texts[document_index].append(word)
                     labels[document_index].append(label)
                     if word in ['.', '!', '?']:  # End of the sentence
@@ -65,16 +65,10 @@ def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentenc
         texts = texts[:-1]
         labels = labels[:-1]
 
-    texts = [' '.join(list_of_words) for list_of_words in  texts]
-    labels = [' '.join(list_of_labels) for list_of_labels in  labels]
-
-    if group_numbers:
-        texts = _substitute_numeric(texts)
-
     return texts, labels
     
 
-def _substitute_numeric(texts):
+def _preprocess_word(word):
     """Substitue each number token into the special token [num].
 
     Parameters
@@ -85,11 +79,13 @@ def _substitute_numeric(texts):
     -------
     texts : list of str
     """
+    word = word.lower()
+
     # The word is either an integer number or a flaoting point (with either . or ,) or two integers divided by "\/".
     pattern = '^[0-9]+((\\\\\/|\,|\.)[0-9]*)?$'
     substitution = '[num]'
     
-    return [' '.join([re.sub(pattern, substitution, word) for word in sentence.split(' ')]) for sentence in texts]
+    return re.sub(pattern, substitution, word)
 
 
 def load_datasets(folder_path: str, split_range: Tuple[int,int] = (100, 150), divide_by_sentence: bool = True,
