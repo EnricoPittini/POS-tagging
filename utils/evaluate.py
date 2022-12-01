@@ -2,8 +2,9 @@ from sklearn.metrics import f1_score, classification_report
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List
+from collections import Counter 
 
-def f1_macro(y_true, y_pred, punctuation_integers, show_classification_report : bool = False, tags_to_evaluate : List[str] = None):
+def evaluate(y_true, y_pred, tags_no_evaluate, vocabulary_labels, show_classification_report : bool = False):
     """Compute the f1 macro, without considering the punctuation
 
     Parameters
@@ -13,22 +14,59 @@ def f1_macro(y_true, y_pred, punctuation_integers, show_classification_report : 
     punctuation_integers : list
         List of the integers corresponding to the punctuation classes (i.e. punctuation POS tags)
     """
-    padding_mask = y_true==0
+    """padding_mask = y_true==0
     y_true = y_true[~padding_mask]
-    y_pred = y_pred[~padding_mask]
+    y_pred = y_pred[~padding_mask]"""
+    ids_no_evaluate = [i for i,pos_tag in enumerate(vocabulary_labels) if pos_tag in tags_no_evaluate]
 
     def f(v):
-        return v in punctuation_integers
-    punctuation_mask_test = np.vectorize(f)(y_true)
+        return v in ids_no_evaluate
+    mask = np.vectorize(f)(y_true)
+    mask = np.logical_or(mask, np.vectorize(f)(y_pred))
+    #print(mask.shape)
  
-    y_true_noPunctuation = y_true[~punctuation_mask_test]
-    y_pred_noPunctuation = y_pred[~punctuation_mask_test]
+    y_true = y_true[~mask]
+    y_pred = y_pred[~mask]
+
+    tags_to_evaluate = [tag for i, tag in enumerate(vocabulary_labels) if np.any(y_true==i) or np.any(y_pred==i)]
+    class_report = classification_report(y_true=np.ravel(y_true), y_pred=np.ravel(y_pred), 
+                                    target_names=tags_to_evaluate, zero_division=0, output_dict=True)
 
     if show_classification_report:
-        print(classification_report(y_true=np.ravel(y_true_noPunctuation), y_pred=np.ravel(y_pred_noPunctuation), 
-                                    target_names=tags_to_evaluate))
+        print(classification_report(y_true=np.ravel(y_true), y_pred=np.ravel(y_pred), 
+                                    target_names=tags_to_evaluate, zero_division=0, output_dict=False))
 
-    return f1_score(y_true=np.ravel(y_true_noPunctuation), y_pred=np.ravel(y_pred_noPunctuation), average='macro')
+    return f1_score(y_true=np.ravel(y_true), y_pred=np.ravel(y_pred), average='macro'), class_report
+
+
+def wrongly_classified_tokens_analysis(x, y_true, y_pred, tags_no_evaluate, vocabulary_labels, vocabulary):
+    ids_no_evaluate = [i for i,pos_tag in enumerate(vocabulary_labels) if pos_tag in tags_no_evaluate]
+
+    def f(v):
+        return v in ids_no_evaluate
+    mask = np.vectorize(f)(y_true)
+    mask = np.logical_or(mask, np.vectorize(f)(y_pred))
+    #print(mask.shape)
+ 
+    y_true = y_true[~mask]
+    y_pred = y_pred[~mask]
+    x = x[~mask]
+
+    y_true = np.ravel(y_true)
+    y_pred = np.ravel(y_pred)
+
+    wrong_class_mask = y_true!=y_pred 
+    # y_true = y_true[wrong_class_mask]
+    # y_pred = y_pred[wrong_class_mask]
+    x = x[wrong_class_mask]
+
+    wrong_tokens_ids = np.array(list(Counter(x).keys())) # equals to list(set(words))
+    wrong_tokens_counts = list(Counter(x).values()) # counts the elements' frequency
+    wrong_tokens_ids = wrong_tokens_ids[np.argsort(wrong_tokens_counts)][::-1]
+    wrong_tokens_counts = sorted(wrong_tokens_counts)[::-1]
+    wrong_tokens = vocabulary[wrong_tokens_ids]
+
+    return wrong_tokens, wrong_tokens_counts
 
 
 def plot_history(history):
