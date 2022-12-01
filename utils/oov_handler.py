@@ -8,9 +8,9 @@ from typing import List, Dict
 
 ######### OOV WORDS ANALYSIS
 
-def get_OOV_analysis(embedding_model : Dict[str, np.array], texts: List[str]):
-    n_words = len(set([word for text in texts for word in text.split()]))
-    OOV_words_list = [word for text in texts for word in text.split() if word not in embedding_model]
+def get_OOV_analysis(embedding_model : Dict[str, np.array], texts: List[List[str]]):
+    n_words = len(set([word for text in texts for word in text]))
+    OOV_words_list = [word for text in texts for word in text if word not in embedding_model]
     OOV_words = set(OOV_words_list)
     n_OOV_words = len(OOV_words)
     proportion_OOV_words = n_OOV_words/n_words
@@ -108,16 +108,16 @@ def _train_oov_terms(embedding_model, co_occurrence_matrix, token2int, int2token
     return (weights+weights_T).detach().cpu().numpy(), losses
 
 
-def extend_embedding_model(embedding_model : Dict[str, np.array], texts: List[str], window_size : int = 5,  n_epochs : int = 100, 
+def extend_embedding_model(embedding_model : Dict[str, np.array], texts: List[List[str]], window_size : int = 5,  n_epochs : int = 100, 
                            device : str = 'cpu'):
-    texts_list = [sentence.lower().split(' ') for sentence in texts]
-    tokens = set([t for sentence in texts_list for t in sentence])
+    #texts_list = [sentence.lower() for sentence in texts]
+    tokens = set([t for text in texts for t in text])
     n_tokens = len(tokens)
     token2int = dict(zip(tokens, range(len(tokens))))
     int2token = {v: k for k,v in token2int.items()}
 
     print('Building co-occurence matrix...')
-    co_occurrence_matrix = _get_co_occurrence_matrix(n_tokens, token2int, texts_list, window_size=window_size)
+    co_occurrence_matrix = _get_co_occurrence_matrix(n_tokens, token2int, texts, window_size=window_size)#texts_list, window_size=window_size)
     print('Co-occurence matrix shape:', co_occurrence_matrix.shape)
     print()
 
