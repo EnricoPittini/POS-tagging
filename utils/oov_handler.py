@@ -117,7 +117,7 @@ def extend_embedding_model(embedding_model : Dict[str, np.array], texts: List[Li
     int2token = {v: k for k,v in token2int.items()}
 
     print('Building co-occurence matrix...')
-    co_occurrence_matrix = _get_co_occurrence_matrix(n_tokens, token2int, texts, window_size=window_size)#texts_list, window_size=window_size)
+    co_occurrence_matrix = _get_co_occurrence_matrix(n_tokens, token2int, texts, window_size=window_size)
     print('Co-occurence matrix shape:', co_occurrence_matrix.shape)
     print()
 
