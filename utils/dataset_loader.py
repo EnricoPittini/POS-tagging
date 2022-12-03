@@ -40,7 +40,7 @@ def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentenc
                     if len(split_line) < 3:
                         continue
                     word, label, _ = split_line
-                    word = _preprocess_word(word)
+                    word = _preprocess_word(word, group_numbers=group_numbers)
                     texts[document_index].append(word)
                     labels[document_index].append(label)
 
@@ -55,7 +55,7 @@ def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentenc
                     if len(split_line) < 3:
                         continue
                     word, label, _ = split_line
-                    word = _preprocess_word(word)
+                    word = _preprocess_word(word, group_numbers=group_numbers)
                     texts[document_index].append(word)
                     labels[document_index].append(label)
                     if word in ['.', '!', '?']:  # End of the sentence
@@ -68,7 +68,7 @@ def _build_dataset_from_files_list(file_name_list : List[str], divide_by_sentenc
     return texts, labels
     
 
-def _preprocess_word(word):
+def _preprocess_word(word: str, group_numbers: bool):
     """Substitue each number token into the special token [num].
 
     Parameters
@@ -80,12 +80,19 @@ def _preprocess_word(word):
     texts : list of str
     """
     word = word.lower()
+    
+    if not group_numbers:
+        return word
 
     # The word is either an integer number or a flaoting point (with either . or ,) or two integers divided by "\/".
-    pattern = '^[0-9]+((\\\\\/|\,|\.)[0-9]*)?$'
+    pattern = '^[0-9]+((\\\\\/|\,|\.)[0-9]*)*$'
+    
+    # The word is a thousand comma separated number, possibly floating point (e.g.: 1,000,000.5)
+    pattern_thousands_separator = '^[0-9]{1,3}(,[0-9]{3})*(\.[0-9]+)?$'
+    
     substitution = '[num]'
     
-    return re.sub(pattern, substitution, word)
+    return re.sub('|'.join([pattern, pattern_thousands_separator]), substitution, word)
 
 
 def load_datasets(folder_path: str, split_range: Tuple[int,int] = (100, 150), divide_by_sentence: bool = True,
