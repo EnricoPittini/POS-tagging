@@ -21,8 +21,7 @@ def _mask_tags_no_evaluate(y_true, y_pred, tags_no_evaluate, vocabulary_labels):
 
     return y_true, y_pred
 
-def compute_f1_score(y_true, y_pred, tags_no_evaluate, vocabulary_labels, show_classification_report : bool = False,
-                    k : int = None):
+def compute_f1_score(y_true, y_pred, tags_no_evaluate, vocabulary_labels):
     """Compute the f1 macro, without considering the punctuation
 
     Parameters
@@ -58,16 +57,18 @@ def compute_class_report(y_true, y_pred, tags_no_evaluate, vocabulary_labels, sh
     worst_predicted_tags = worst_predicted_tags[:k]
     worst_predicted_tags = OrderedDict({tag:class_report[tag] for (f1_score, tag) in worst_predicted_tags})
 
-    plt.figure(figsize=(12,12))
-    x_axis = 2*np.arange(len(worst_predicted_tags))
-    plt.bar(x_axis-0.5, [worst_predicted_tags[tag]['precision'] for tag in worst_predicted_tags], label='precision', width=0.5)
-    b = plt.bar(x_axis, [worst_predicted_tags[tag]['recall'] for tag in worst_predicted_tags], label='recall', width=0.5)
-    plt.bar(x_axis+0.5, [worst_predicted_tags[tag]['f1-score'] for tag in worst_predicted_tags], label='f1-score', width=0.5)
-    plt.bar_label(b, labels=[worst_predicted_tags[tag]['support'] for tag in worst_predicted_tags], label_type='center');
-    plt.xticks(x_axis, list(worst_predicted_tags.keys()))
-    plt.grid(axis='y')
-    plt.legend()
-    plt.xticks(rotation=45);
+    if plot:
+        plt.figure(figsize=(12,12))
+        x_axis = 2*np.arange(len(worst_predicted_tags))
+        plt.bar(x_axis-0.5, [worst_predicted_tags[tag]['precision'] for tag in worst_predicted_tags], label='precision', width=0.5)
+        b = plt.bar(x_axis, [worst_predicted_tags[tag]['recall'] for tag in worst_predicted_tags], label='recall', width=0.5)
+        plt.bar(x_axis+0.5, [worst_predicted_tags[tag]['f1-score'] for tag in worst_predicted_tags], label='f1-score', width=0.5)
+        plt.bar_label(b, labels=[worst_predicted_tags[tag]['support'] for tag in worst_predicted_tags], label_type='center')
+        plt.xticks(x_axis, list(worst_predicted_tags.keys()))
+        plt.grid(axis='y')
+        plt.legend()
+        plt.xticks(rotation=45)
+        plt.show()
 
 
     return class_report, worst_predicted_tags
@@ -117,19 +118,21 @@ def wrongly_classified_tokens_analysis(x, y_true, y_pred, tags_no_evaluate, voca
     wrong_tokens_tags_df = pd.DataFrame(df_entries_list)
     wrong_tokens_tags_df = wrong_tokens_tags_df.set_index(keys='token').fillna(0.0).astype(int)
 
-    plt.figure(figsize=(11,11))
-    bottom = [0 for _ in wrong_tokens_tags_df.index]
-    for tag in wrong_tokens_tags_df.columns:
-        b = plt.bar(x=wrong_tokens_tags_df.index, height=wrong_tokens_tags_df[tag], bottom=bottom)
-        bottom += wrong_tokens_tags_df[tag]
-        plt.bar_label(b, labels=[tag if wrong_tokens_tags_df[tag][i]>0 else '' for i in range(wrong_tokens_tags_df.shape[0])], label_type='center');
-    plt.xticks(rotation=45);
-    ax = plt.gca()
-    ax.set_ylim([0, sum(wrong_tokens_tags_df.iloc[0])+1]);
-    #plt.grid(axis='y');
-    plt.ylabel('Number of misclassified instances')
-    plt.xlabel('Misclassified tokens')
-    plt.title(f'Top {k} misclassified tokens')
+    if plot:
+        plt.figure(figsize=(11,11))
+        bottom = [0 for _ in wrong_tokens_tags_df.index]
+        for tag in wrong_tokens_tags_df.columns:
+            b = plt.bar(x=wrong_tokens_tags_df.index, height=wrong_tokens_tags_df[tag], bottom=bottom)
+            bottom += wrong_tokens_tags_df[tag]
+            plt.bar_label(b, labels=[tag if wrong_tokens_tags_df[tag][i]>0 else '' for i in range(wrong_tokens_tags_df.shape[0])], label_type='center')
+        plt.xticks(rotation=45)
+        ax = plt.gca()
+        ax.set_ylim([0, sum(wrong_tokens_tags_df.iloc[0])+1])
+        #plt.grid(axis='y');
+        plt.ylabel('Number of misclassified instances')
+        plt.xlabel('Misclassified tokens')
+        plt.title(f'Top {k} misclassified tokens')
+        plt.show()
 
     return wrong_tokens, wrong_tokens_counts, wrong_tokens_tags_df
 
@@ -150,3 +153,4 @@ def plot_history(history):
     plt.grid()
     plt.legend()
     plt.title('Accuracy history')
+    plt.show()

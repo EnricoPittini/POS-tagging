@@ -1,6 +1,6 @@
 import tensorflow.keras as ks
 
-def build_second_model(n_classes, embedding_dim=50, embedding_matrix=None, latent_dim=128):
+def build_second_model(n_classes, embedding_dim=50, embedding_matrix=None, latent_dim=128, dropout=0.0):
     """Build the first model, consisting in two BiLSTM layers plus a Dense layer on top.
 
     Parameters
@@ -30,11 +30,11 @@ def build_second_model(n_classes, embedding_dim=50, embedding_matrix=None, laten
 
     # Application of the first Bidirectional LSTM. We take the full sequence of hidden states `h_outputs`.
     h_outputs, _, _, _, _ = ks.layers.Bidirectional(ks.layers.LSTM(units=latent_dim, return_sequences=True, 
-                                                        return_state=True))(embeddings)
+                                                        return_state=True, dropout=dropout))(embeddings)
 
     # Application of the second Bidirectional LSTM. We take the full sequence of hidden states `h_outputs`.
     h_outputs, _, _, _, _ = ks.layers.Bidirectional(ks.layers.LSTM(units=latent_dim, return_sequences=True, 
-                                                        return_state=True))(h_outputs)
+                                                        return_state=True, dropout=dropout))(h_outputs)
 
     # Final outputs of the model: for each input token, we produce a distribution for predicting its POS tag. 
     # No activation function is used (`SparseCategoricalCrossentropy(from_logits=True)` is used as loss).
