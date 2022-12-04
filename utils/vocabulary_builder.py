@@ -2,7 +2,7 @@ from collections import Counter
 from typing import List
 import numpy as np
 
-def create_vocabulary(texts : List[List[str]]):
+def create_vocabulary(texts : List[List[str]], padding : bool = True):
     """Create the vocabulary from  the given texts
 
     Parameters
@@ -26,7 +26,11 @@ def create_vocabulary(texts : List[List[str]]):
     tokens_counts = list(Counter(texts_flat).values()) 
     tokens = tokens[np.argsort(tokens_counts)][::-1]
 
-    vocabulary = np.array([''] +  list(tokens)) 
+    if padding:
+        vocabulary = np.array([''] +  list(tokens)) 
+    else:
+        vocabulary = tokens
+
     word2id = {word:id for id, word in enumerate(vocabulary)}
 
     texts_ids = [[word2id[word] for word in text] for text in texts]
