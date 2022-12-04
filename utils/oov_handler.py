@@ -9,6 +9,20 @@ from typing import List, Dict
 ######### OOV WORDS ANALYSIS
 
 def get_OOV_analysis(embedding_model : Dict[str, np.array], texts: List[List[str]]):
+    """_summary_
+
+    Parameters
+    ----------
+    embedding_model : Dict[str, np.array]
+        _description_
+    texts : List[List[str]]
+        _description_
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
     n_words = len(set([word for text in texts for word in text]))
     OOV_words_list = [word for text in texts for word in text if word not in embedding_model]
     OOV_words = set(OOV_words_list)

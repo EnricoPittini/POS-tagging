@@ -412,23 +412,3 @@ def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pre
             print()
 
     return worst_sentences_dict
-
-
-
-def plot_history(history):
-    plt.plot(history.history['loss'], label='loss')
-    plt.plot(history.history['val_loss'], label='val_loss')
-    plt.xlabel('epochs')
-    plt.grid()
-    plt.legend()
-    plt.title('Loss history')
-
-    plt.figure()
-
-    plt.plot(history.history['accuracy'], label='accuracy')
-    plt.plot(history.history['val_accuracy'], label='val_accuracy')
-    plt.xlabel('epochs')
-    plt.grid()
-    plt.legend()
-    plt.title('Accuracy history')
-    plt.show()

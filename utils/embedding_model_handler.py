@@ -17,7 +17,7 @@ def load_embedding_model(folder_path : str, embedding_dim : int = 50, extended_v
 
     Returns
     -------
-    GLOVE_embeddings : dict
+    GLOVE_embeddings : Dict[str, np.array]
         Dictionary mapping word types into np.array embedding vectors.
     """
     GLOVE_embeddings = []
@@ -38,6 +38,16 @@ def load_embedding_model(folder_path : str, embedding_dim : int = 50, extended_v
 
 
 def store_embedding_model(embedding_path : str, embedding_model : Dict[str, np.array]):
+    """Store the given embedding model
+
+    Parameters
+    ----------
+    embedding_path : str
+        Path in which storing the embedding model
+    embedding_model : Dict[str, np.array]
+        The embedding model (e.g. Glove)
+
+    """
     with open(embedding_path, 'w', encoding='utf-8') as file:
         for token,embedding in tqdm(embedding_model.items()):
             try:
