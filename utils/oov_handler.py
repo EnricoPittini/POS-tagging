@@ -1,47 +1,27 @@
-from collections import Counter
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Dict
 
+from collections import OrderedDict
+
+from utils.vocabulary_builder import create_vocabulary
+
+def _get_vocabulary_dictionaries(vocabulary: np.ndarray):
+    int2token = {i:token for i, token in enumerate(vocabulary)}
+    token2int = {token:i for i, token in int2token.items()}
+    return int2token, token2int
 
 
-######### OOV WORDS ANALYSIS
+def _get_co_occurrence_matrix(vocabulary: np.ndarray, texts: List[List[str]], window_size: int = 5) -> np.ndarray:
+    n_tokens = len(vocabulary)
 
-def get_OOV_analysis(embedding_model : Dict[str, np.array], texts: List[List[str]]):
-    """_summary_
+    _, token2int = _get_vocabulary_dictionaries(vocabulary)
 
-    Parameters
-    ----------
-    embedding_model : Dict[str, np.array]
-        _description_
-    texts : List[List[str]]
-        _description_
-
-    Returns
-    -------
-    _type_
-        _description_
-    """
-    n_words = len(set([word for text in texts for word in text]))
-    OOV_words_list = [word for text in texts for word in text if word not in embedding_model]
-    OOV_words = set(OOV_words_list)
-    n_OOV_words = len(OOV_words)
-    proportion_OOV_words = n_OOV_words/n_words
-    OOV_words_counts = Counter(OOV_words_list)
-    OOV_words_counts = sorted(OOV_words_counts.items(), key=lambda x:x[1])[::-1]
-
-    return OOV_words, proportion_OOV_words, OOV_words_counts
-
-
-
-########## OOV WORDS TRAINING
-
-def _get_co_occurrence_matrix(n_tokens : int, token2int: Dict[str, int], sentences: List[List[str]], window_size: int = 5) -> np.ndarray:
     # Create the tokens co-occurence matrix filled with zeros
     co_occurrence_matrix = np.zeros(shape=(n_tokens, n_tokens), dtype=np.int32)
 
-    for sentence in sentences:
+    for sentence in texts:
         for i, token in enumerate(sentence[:-1]):
             context_token_indices = [token2int[t] for t in sentence[i+1:i+window_size+1]]
             curr_token_index = token2int[token]
@@ -65,8 +45,12 @@ def _loss_function(weights, weights_t, bias, bias_t, co_occurence_matrix):
     return loss
 
 
-def _train_oov_terms(embedding_model, co_occurrence_matrix, token2int, int2token, n_epochs = 100, device='cpu'):
-    n_tokens = len(token2int)
+def _train_oov_terms(embedding_model, co_occurrence_matrix, vocabulary : np.ndarray, previous_vocabulary : np.ndarray = None,
+                     previous_trained_parameters_dict : dict = None, n_epochs = 100, device='cpu'):
+
+
+    n_tokens = len(vocabulary)
+    int2token, token2int = _get_vocabulary_dictionaries(vocabulary)
     
     embedding_size = list(embedding_model.values())[0].shape[0]
 
@@ -78,6 +62,19 @@ def _train_oov_terms(embedding_model, co_occurrence_matrix, token2int, int2token
     bias = torch.randn((n_tokens, ), requires_grad=True, device=device)
     weights_t = torch.randn((n_tokens, embedding_size), requires_grad=True, device=device)
     bias_t = torch.randn((n_tokens, ), requires_grad=True, device=device)
+
+    if previous_vocabulary is not None:
+        previous_int2token, previous_token2int = _get_vocabulary_dictionaries(previous_vocabulary)
+        previous_weights, previous_weights_t, previous_bias, previous_bias_t = (previous_trained_parameters_dict['weights'], 
+                                                                                previous_trained_parameters_dict['weights_t'], 
+                                                                                previous_trained_parameters_dict['bias'], 
+                                                                                previous_trained_parameters_dict['bias_t'])
+        previous2new = OrderedDict({i_previous:token2int[token_previous] for i_previous, token_previous in previous_int2token.items()})
+        with torch.no_grad():   
+            weights[list(previous2new.values()), :] = previous_weights[list(previous2new.keys()),:]
+            weights_t[list(previous2new.values()), :] = previous_weights_t[list(previous2new.keys()),:]
+            bias[list(previous2new.values())] = previous_bias[list(previous2new.keys())]
+            bias_t[list(previous2new.values())] = previous_bias_t[list(previous2new.keys())]
 
     co_occurrence_matrix=torch.tensor(co_occurrence_matrix, dtype=torch.int64, device=device)
 
@@ -119,25 +116,35 @@ def _train_oov_terms(embedding_model, co_occurrence_matrix, token2int, int2token
     if knownIndices is not None:
         weights_T=mask*weights_t + (1-mask)* (k_embedding-weights)
 
-    return (weights+weights_T).detach().cpu().numpy(), losses
+    trained_parameters_dict = {'weights': weights, 'weights_t': weights_T, 'bias': bias, 'bias_t':bias_t}
+
+    return (weights+weights_T).detach().cpu().numpy(), losses, trained_parameters_dict
 
 
-def extend_embedding_model(embedding_model : Dict[str, np.array], texts: List[List[str]], window_size : int = 5,  n_epochs : int = 100, 
-                           device : str = 'cpu'):
+def extend_embedding_model(embedding_model : Dict[str, np.array], texts: List[List[str]], previous_vocabulary : np.ndarray = None,
+                           previous_trained_parameters_dict : dict = None, window_size : int = 5,  n_epochs : int = 100, device : str = 'cpu'):
+    if (previous_vocabulary is not None and previous_trained_parameters_dict is None) or (previous_vocabulary is None and previous_trained_parameters_dict is not None):
+        raise ValueError('`previous_vocabulary` and `previous_trained_parameters_dict` must be either both None or not None')
+
     #texts_list = [sentence.lower() for sentence in texts]
-    tokens = set([t for text in texts for t in text])
+    vocabulary, _ = create_vocabulary(texts, padding=False)
+    """tokens = set([t for text in texts for t in text])
     n_tokens = len(tokens)
     token2int = dict(zip(tokens, range(len(tokens))))
-    int2token = {v: k for k,v in token2int.items()}
+    int2token = {v: k for k,v in token2int.items()}"""
+    n_tokens = len(vocabulary)
+    int2token = {i:token for i, token in enumerate(vocabulary)}
+    token2int = {token:i for i, token in int2token.items()}
 
     print('Building co-occurence matrix...')
-    co_occurrence_matrix = _get_co_occurrence_matrix(n_tokens, token2int, texts, window_size=window_size)
+    co_occurrence_matrix = _get_co_occurrence_matrix(vocabulary, texts, window_size=window_size)
     print('Co-occurence matrix shape:', co_occurrence_matrix.shape)
     print()
 
     print('Training OOV words...')
-    weights, losses = _train_oov_terms(embedding_model, co_occurrence_matrix, token2int, int2token, device=device, 
-                                       n_epochs=n_epochs)
+    weights, losses, trained_parameters_dict = _train_oov_terms(embedding_model, co_occurrence_matrix, vocabulary,
+                                                                previous_vocabulary, previous_trained_parameters_dict, device=device, 
+                                                                n_epochs=n_epochs)
 
     plt.plot(losses)
     plt.title('Training loss')
@@ -145,7 +152,7 @@ def extend_embedding_model(embedding_model : Dict[str, np.array], texts: List[Li
     plt.grid()
     plt.show()
 
-    extended_embedding_model = { t: weights[i] for i, t in enumerate(tokens) }
+    extended_embedding_model = { t: weights[i] for i, t in enumerate(vocabulary) }
     extended_embedding_model.update(embedding_model)
 
-    return extended_embedding_model
+    return extended_embedding_model, vocabulary, trained_parameters_dict
