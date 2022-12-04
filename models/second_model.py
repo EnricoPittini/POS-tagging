@@ -42,6 +42,9 @@ def build_second_model(n_classes, embedding_dim=50, embedding_matrix=None, laten
 
     model = ks.Model(inputs=inputs, outputs=outputs)
 
+    model.compile(loss=ks.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer='adam', 
+                       metrics=['accuracy'])
+
     return model
 
 

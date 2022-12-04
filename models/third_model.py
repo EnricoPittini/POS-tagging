@@ -44,6 +44,9 @@ def build_third_model(n_classes, embedding_dim=50, embedding_matrix=None, latent
 
     model = ks.Model(inputs=inputs, outputs=outputs)
 
+    model.compile(loss=ks.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer='adam', 
+                       metrics=['accuracy'])
+
     return model
 
 

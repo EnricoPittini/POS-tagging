@@ -38,6 +38,9 @@ def build_baseline_model(n_classes, embedding_dim=50, embedding_matrix=None, lat
 
     model = ks.Model(inputs=inputs, outputs=outputs)
 
+    model.compile(loss=ks.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer='adam', 
+                       metrics=['accuracy'])
+
     return model
 
 
