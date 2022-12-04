@@ -1,7 +1,7 @@
 from sklearn.metrics import f1_score, classification_report
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import List
+from typing import List, Tuple
 from collections import Counter 
 import pandas as pd
 from collections import OrderedDict
@@ -174,7 +174,7 @@ def compute_class_report(y_true : np.array, y_pred : np.array, tags_no_evaluate 
 
 def wrongly_classified_tokens_analysis(x : np.array, y_true : np.array, y_pred : np.array, tags_no_evaluate : List[str], 
                                        vocabulary_labels : np.array, vocabulary : np.array, k : int = 20,
-                                       plot : bool = False):
+                                       plot : bool = False) -> Tuple[OrderedDict, pd.DataFrame]:
     """Analyze the worst classified tokens.
 
     The analysis is based on the absolute number of misclassified instances of each token (in this count, the POS tags to not

@@ -1,3 +1,3 @@
-Stacked bars POS tags for wrong tokens
-Divide functions for computing f1 score and class report
-Roc curve
+Fix functions output types
+Fix np.array type (into np.ndarray)
+Take into account ROC curve?
