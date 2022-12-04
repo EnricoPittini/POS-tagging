@@ -1,6 +1,7 @@
 import tensorflow.keras as ks
 
-def build_third_model(n_classes, embedding_dim=50, embedding_matrix=None, latent_dim=128, dense_dim=128):
+def build_third_model(n_classes, embedding_dim=50, embedding_matrix=None, latent_dim=128, dropout=0.0, dense_dim=128, 
+                     merge_mode='concat'):
     """Build the first model, consisting in two BiLSTM layers plus a Dense layer on top.
 
     Parameters
@@ -32,7 +33,7 @@ def build_third_model(n_classes, embedding_dim=50, embedding_matrix=None, latent
 
     # Application of the BiLSTM. We take the full sequence of hidden states `h_outputs`.
     h_outputs, _, _, _, _ = ks.layers.Bidirectional(ks.layers.LSTM(units=latent_dim, return_sequences=True, 
-                                                        return_state=True))(embeddings)
+                                                        return_state=True, dropout=dropout), merge_mode=merge_mode)(embeddings)
 
     # Application of the first Dense layer
     outputs = ks.layers.Dense(units=dense_dim)(h_outputs)

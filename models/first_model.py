@@ -1,6 +1,6 @@
 import tensorflow.keras as ks
 
-def build_first_model(n_classes, embedding_dim=50, embedding_matrix=None, latent_dim=128):
+def build_first_model(n_classes, embedding_dim=50, embedding_matrix=None, latent_dim=128, dropout=0.0, merge_mode='concat'):
     """Build the first model, consisting in a Bidirectional GRU plus a Dense layer on top.
 
     Parameters
@@ -30,7 +30,7 @@ def build_first_model(n_classes, embedding_dim=50, embedding_matrix=None, latent
 
     # Application of the Bidirectional GRU. We take the full sequence of hidden states `h_outputs`.
     h_outputs, _, _,  = ks.layers.Bidirectional(ks.layers.GRU(units=latent_dim, return_sequences=True, 
-                                                        return_state=True))(embeddings)
+                                                        return_state=True, dropout=dropout), merge_mode=merge_mode)(embeddings)
 
     # Final outputs of the model: for each input token, we produce a distribution for predicting its POS tag. 
     # No activation function is used (`SparseCategoricalCrossentropy(from_logits=True)` is used as loss).
