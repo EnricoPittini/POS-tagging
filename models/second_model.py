@@ -38,7 +38,8 @@ def build_second_model(n_classes, embedding_dim=50, embedding_matrix=None, laten
 
     # Final outputs of the model: for each input token, we produce a distribution for predicting its POS tag. 
     # No activation function is used (`SparseCategoricalCrossentropy(from_logits=True)` is used as loss).
-    outputs = ks.layers.Dense(units=n_classes)(h_outputs)
+    # The TimeDistributed dense layer is used.
+    outputs = ks.layers.TimeDistributed(ks.layers.Dense(units=n_classes))(h_outputs)
 
     model = ks.Model(inputs=inputs, outputs=outputs)
 
