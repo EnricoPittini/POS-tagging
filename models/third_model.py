@@ -35,14 +35,18 @@ def build_third_model(n_classes, embedding_dim=50, embedding_matrix=None, latent
     h_outputs, _, _, _, _ = ks.layers.Bidirectional(ks.layers.LSTM(units=latent_dim, return_sequences=True, 
                                                         return_state=True, dropout=dropout), merge_mode=merge_mode)(embeddings)
 
-    # Application of the first Dense layer
-    outputs = ks.layers.Dense(units=dense_dim)(h_outputs)
+    # Application of the first Dense layer. The TimeDistributed dense layer is used.
+    outputs = ks.layers.TimeDistributed(ks.layers.Dense(units=dense_dim))(h_outputs)
 
     # Final outputs of the model: for each input token, we produce a distribution for predicting its POS tag. 
     # No activation function is used (`SparseCategoricalCrossentropy(from_logits=True)` is used as loss).
-    outputs = ks.layers.Dense(units=n_classes)(outputs)
+    # The TimeDistributed dense layer is used.
+    outputs = ks.layers.TimeDistributed(ks.layers.Dense(units=n_classes))(h_outputs)
 
     model = ks.Model(inputs=inputs, outputs=outputs)
+
+    model.compile(loss=ks.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer='adam', 
+                       metrics=['accuracy'])
 
     return model
 

@@ -324,8 +324,8 @@ def _create_output_colored_string(sentence : List[str], sentence_tagsNoEvaluate_
 
 
 def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pred : np.array, tags_no_evaluate : List[str], 
-                                          vocabulary_labels : np.array, vocabulary : np.array, k : int = 20, 
-                                          show : bool = False):
+                                          vocabulary_labels : np.array, vocabulary : np.array, 
+                                          use_absolute_error : bool = True, k : int = 20, show : bool = False):
     """Analyze the worst classified sentences.
 
     The analysis is based on the relative error of each sentence, which is the number of misclassified words divided by the 
@@ -366,22 +366,30 @@ def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pre
 
     # For each sentence, there is the number of misclassified tokens
     sentences_errors_counts = np.sum(mask_wrongClass, axis=1)
-    # For each sentence, there is its length
-    sentences_lengths = np.sum(~tagsNoEvaluate_mask, axis=1)
-    # For each sentence, there is its relative error
-    sentences_errors_relativeErrors = sentences_errors_counts/sentences_lengths
-    # Indices of the sentences sorted by relative error in descending order
-    sentences_indeces_sorted = np.argsort(sentences_errors_relativeErrors)[::-1]
-    # Relative errors of the sentences, sorted in descending order
-    sentences_errors_relativeErrors = sorted(sentences_errors_relativeErrors)[::-1]
+    if use_absolute_error:
+        # Indices of the sentences sorted by error counts in descending order
+        sentences_indeces_sorted = np.argsort(sentences_errors_counts)[::-1]
+        # Error counts of the sentences, sorted in descending order
+        sentences_errors_counts = sorted(sentences_errors_counts)[::-1]
+        sentences_errors = sentences_errors_counts
+    else:
+        # For each sentence, there is its length
+        sentences_lengths = np.sum(~tagsNoEvaluate_mask, axis=1)
+        # For each sentence, there is its relative error
+        sentences_errors_relativeErrors = sentences_errors_counts/sentences_lengths
+        # Indices of the sentences sorted by relative error in descending order
+        sentences_indeces_sorted = np.argsort(sentences_errors_relativeErrors)[::-1]
+        # Relative errors of the sentences, sorted in descending order
+        sentences_errors_relativeErrors = sorted(sentences_errors_relativeErrors)[::-1]
+        sentences_errors = sentences_errors_relativeErrors
 
-    # Ordered dict which contains the sentences (represented as integer id), with also the corresponding relative error, 
+    # Ordered dict which contains the sentences (represented as integer id), with also the corresponding error, 
     # sorted by relative error
-    worst_sentences_dict = OrderedDict(zip(sentences_indeces_sorted, sentences_errors_relativeErrors))
+    worst_sentences_dict = OrderedDict(zip(sentences_indeces_sorted, sentences_errors))
 
     if show:
         # Keep the worst `k` sentences
-        sentences_indeces_sorted, sentences_errors_relativeErrors = sentences_indeces_sorted[:k], sentences_errors_relativeErrors[:k]
+        sentences_indeces_sorted, sentences_errors = sentences_indeces_sorted[:k], sentences_errors[:k]
 
         # Print the legend
         right_color = Fore.GREEN  # Color for the correctly classified word
@@ -397,9 +405,11 @@ def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pre
         for i in range(k):
             # Print each sentence, underlying the misclassified tokens
             sentence_index = sentences_indeces_sorted[i]
-            relative_error = sentences_errors_relativeErrors[i]
+            error = sentences_errors[i]
             print(f'{i+1}) Sentence index {sentence_index}')
-            print('Relative error: {:.2f}'.format(relative_error))
+            error_prefix_string = 'Error count' if use_absolute_error else 'Relative error'
+            error_formatted = f'{error:.2f}' if isinstance(error, np.float64) else str(error)
+            print(f'{error_prefix_string}: {error_formatted}')
             sentence = vocabulary[x[sentence_index]]
             sentence = [token for token in sentence if token!='']
             sentence_string = _create_output_colored_string(sentence, 

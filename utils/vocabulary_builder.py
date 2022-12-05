@@ -2,13 +2,15 @@ from collections import Counter
 from typing import List
 import numpy as np
 
-def create_vocabulary(texts : List[List[str]], padding : bool = True):
+def create_vocabulary(texts : List[List[str]], add_padding_token : bool = True):
     """Create the vocabulary from  the given texts
 
     Parameters
     ----------
     texts : List[List[str]]
         Each list is a sentence, represented as a list of strings (i.e. words).
+    add_padding_token : bool, optional
+        Whether to add the padding token '' into the vocabulary, default True.
 
     Returns
     -------
@@ -26,7 +28,7 @@ def create_vocabulary(texts : List[List[str]], padding : bool = True):
     tokens_counts = list(Counter(texts_flat).values()) 
     tokens = tokens[np.argsort(tokens_counts)][::-1]
 
-    if padding:
+    if add_padding_token:
         vocabulary = np.array([''] +  list(tokens)) 
     else:
         vocabulary = tokens
