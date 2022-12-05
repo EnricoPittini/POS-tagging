@@ -1,4 +1,4 @@
-from sklearn.metrics import f1_score, classification_report
+from sklearn.metrics import f1_score, classification_report, ConfusionMatrixDisplay
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Tuple
@@ -18,7 +18,7 @@ def _compute_mask_tags_no_evaluate(y_true : np.array, y_pred : np.array, tags_no
         Two-dimensional array, containing the true POS tags (axis 0 : sentences; axis 1 : tokens)
     y_pred : np.array
         Two-dimensional array, containing the predicted POS tags (axis 0 : sentences; axis 1 : tokens)
-    punctuation_integers : list of str
+    tags_no_evaluate : list of str
         List of POS tags to not consider in the evaluation
     vocabulary_labels : np.array
         Array of strings, representing the mapping from integer ids to POS tags.
@@ -48,7 +48,7 @@ def _mask_tags_no_evaluate(y_true : np.array, y_pred : np.array, tags_no_evaluat
         Two-dimensional array, containing the true POS tags (axis 0 : sentences; axis 1 : tokens)
     y_pred : np.array
         Two-dimensional array, containing the predicted POS tags (axis 0 : sentences; axis 1 : tokens)
-    punctuation_integers : list of str
+    tags_no_evaluate : list of str
         List of POS tags to not consider in the evaluation
     vocabulary_labels : np.array
         Array of strings, representing the mapping from integer ids to POS tags.
@@ -89,7 +89,7 @@ def compute_f1_score(y_true : np.array, y_pred : np.array, tags_no_evaluate : Li
         Two-dimensional array, containing the true POS tags (axis 0 : sentences; axis 1 : tokens)
     y_pred : np.array
         Two-dimensional array, containing the predicted POS tags (axis 0 : sentences; axis 1 : tokens)
-    punctuation_integers : list of str
+    tags_no_evaluate : list of str
         List of POS tags to not consider in the evaluation
     vocabulary_labels : np.array
         Array of strings, representing the mapping from integer ids to POS tags.
@@ -113,7 +113,7 @@ def compute_class_report(y_true : np.array, y_pred : np.array, tags_no_evaluate 
         Two-dimensional array, containing the true POS tags (axis 0 : sentences; axis 1 : tokens)
     y_pred : np.array
         Two-dimensional array, containing the predicted POS tags (axis 0 : sentences; axis 1 : tokens)
-    punctuation_integers : list of str
+    tags_no_evaluate : list of str
         List of POS tags to not consider in the evaluation
     vocabulary_labels : np.array
         Array of strings, representing the mapping from integer ids to POS tags.
@@ -167,6 +167,8 @@ def compute_class_report(y_true : np.array, y_pred : np.array, tags_no_evaluate 
         plt.grid(axis='y')
         plt.legend()
         plt.xticks(rotation=45)
+        plt.title(f'{k} worst classified POS tags (according to f1-score)')
+        plt.xlabel('POS tags')
         plt.show()
 
     return class_report
@@ -188,7 +190,7 @@ def wrongly_classified_tokens_analysis(x : np.array, y_true : np.array, y_pred :
         Two-dimensional array, containing the true POS tags (axis 0 : sentences; axis 1 : tokens)
     y_pred : np.array
         Two-dimensional array, containing the predicted POS tags (axis 0 : sentences; axis 1 : tokens)
-    punctuation_integers : list of str
+    tags_no_evaluate : list of str
         List of POS tags to not consider in the evaluation
     vocabulary_labels : np.array
         Array of strings, representing the mapping from integer ids to POS tags.
@@ -266,7 +268,7 @@ def wrongly_classified_tokens_analysis(x : np.array, y_true : np.array, y_pred :
         plt.grid(axis='y');
         plt.ylabel('Number of misclassified instances')
         plt.xlabel('Misclassified tokens')
-        plt.title(f'Worst {k} misclassified tokens')
+        plt.title(f'{k} worst misclassified tokens')
         plt.show()
 
     wrong_tokens_dict = OrderedDict(zip(wrong_tokens, wrong_tokens_counts))
@@ -276,7 +278,8 @@ def wrongly_classified_tokens_analysis(x : np.array, y_true : np.array, y_pred :
 
 def _create_output_colored_string(sentence : List[str], sentence_tagsNoEvaluate_mask : np.array, 
                                   sentence_mask_wrongClass : np.array, sentence_y_true : np.array, 
-                                  sentence_y_pred : np.array, vocabulary_labels : np.array) -> str:
+                                  sentence_y_pred : np.array, vocabulary_labels : np.array,
+                                  token : str = None, tag : str = None) -> str:
     """Create the output string corresponding to the given sentence.
 
     The words are colored in different ways: green if correct word, red if misclassified word, white if non-evaluated word
@@ -296,6 +299,14 @@ def _create_output_colored_string(sentence : List[str], sentence_tagsNoEvaluate_
         Monodimensional array containing the predicted POS tags of the tokens in the sentence.
     vocabulary_labels : np.array
         Array of strings, representing the mapping from integer ids to POS tags.
+    token : str, optional
+        The token of interest.
+        By default is None.
+        Note : `token` and `tag` can't be both specified.
+    tag : str, optional
+        The tag of interest.
+        By default is None.
+        Note : `token` and `tag` can't be both specified.
 
     Returns
     -------
@@ -306,6 +317,7 @@ def _create_output_colored_string(sentence : List[str], sentence_tagsNoEvaluate_
     right_color = Fore.GREEN  # Color for the correctly classified word
     noEvaluate_color = Style.RESET_ALL  # Color for the non-evaluation word
     wrong_color = Fore.RED  # Color for the misclassified word
+    wrong_color_ofInterest = Fore.YELLOW  # Color for the misclassified word of the token/tag of interest
 
     output_string = ''
     for i, word in enumerate(sentence):
@@ -314,6 +326,8 @@ def _create_output_colored_string(sentence : List[str], sentence_tagsNoEvaluate_
             color = noEvaluate_color
         elif sentence_mask_wrongClass[i]:
             color = wrong_color
+            if (token is not None and word==token) or (tag is not None and vocabulary_labels[sentence_y_true[i]]==tag):
+                color = wrong_color_ofInterest            
             true_tag, wrong_tag = vocabulary_labels[sentence_y_true[i]], vocabulary_labels[sentence_y_pred[i]]
             additional_str = f'[{true_tag}/{wrong_tag}]'
         else:
@@ -325,7 +339,8 @@ def _create_output_colored_string(sentence : List[str], sentence_tagsNoEvaluate_
 
 def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pred : np.array, tags_no_evaluate : List[str], 
                                           vocabulary_labels : np.array, vocabulary : np.array, 
-                                          use_absolute_error : bool = True, k : int = 20, show : bool = False):
+                                          use_absolute_error : bool = True, token : str = None, tag : str = None,
+                                          k : int = 20, show : bool = False, legend : bool = True):
     """Analyze the worst classified sentences.
 
     The analysis is based on the relative error of each sentence, which is the number of misclassified words divided by the 
@@ -339,17 +354,30 @@ def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pre
         Two-dimensional array, containing the true POS tags (axis 0 : sentences; axis 1 : tokens)
     y_pred : np.array
         Two-dimensional array, containing the predicted POS tags (axis 0 : sentences; axis 1 : tokens)
-    punctuation_integers : list of str
+    tags_no_evaluate : list of str
         List of POS tags to not consider in the evaluation
     vocabulary_labels : np.array
         Array of strings, representing the mapping from integer ids to POS tags.
     vocabulary : np.array
         Array of strings, representing the mapping from integer ids to words.
+    use_absolute_error : bool, optional
+        Whether to consider the absolute error of each sentence, i.e. the number of misclassified tokens, or the relative
+        error, i.e. the number of misclassified tokens divided by the total number of tokens. By default True.
+    token : str, optional
+        If specified, only the sentences containing at least one error on that token are shown.
+        By default is None.
+        Note : `token` and `tag` can't be both specified.
+    tag : str, optional
+        If specified, only the sentences containing at least one error on that tag are shown.
+        By default is None.
+        Note : `token` and `tag` can't be both specified.
     k : int, optional
         Number of sentences to analyze, by default 20.
         Basically, the worst `k` classified sentences are analyzed.
     show : bool, optional
         Whether to print or not the sentences, by default False
+    legend : bool, optional
+        Whether to print also the legend or not, by default True.
 
     Returns
     -------
@@ -357,6 +385,9 @@ def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pre
         It contains the sentences (represented as integer id), with also the corresponding relative error, sorted by relative
         error.
     """
+    if tag is not None and token is not None:
+        raise ValueError('`tag` and `token` can\'t be both specified')
+
     # Mask localizing the tags to not evaluate
     tagsNoEvaluate_mask = _compute_mask_tags_no_evaluate(y_true, y_pred, tags_no_evaluate, vocabulary_labels)
     # Mask localizing the misclassified tokens
@@ -383,6 +414,30 @@ def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pre
         sentences_errors_relativeErrors = sorted(sentences_errors_relativeErrors)[::-1]
         sentences_errors = sentences_errors_relativeErrors
 
+    if token is not None:
+        # If a token is specified, we keep only the sentences which have at least one error on that token
+        token_id = [i for i, t in enumerate(vocabulary) if t==token][0]
+        mask_token = np.logical_and(x==token_id, mask_wrongClass)
+        mask_sentences_token = np.sum(mask_token, axis=1)>0
+        sentences_errors = np.array([error 
+                                     for i, error in enumerate(sentences_errors) 
+                                     if mask_sentences_token[sentences_indeces_sorted[i]]])
+        sentences_indeces_sorted = np.array([sentence_id 
+                                             for sentence_id in sentences_indeces_sorted 
+                                             if mask_sentences_token[sentence_id]])
+    
+    if tag is not None:
+        # If a tag is specified, we keep only the sentences which have at least one error on that tag
+        tag_id = [i for i, t in enumerate(vocabulary_labels) if t==tag][0]
+        mask_tag = np.logical_and(y_true==tag_id, mask_wrongClass)
+        mask_sentences_tag = np.sum(mask_tag, axis=1)>0
+        sentences_errors = np.array([error 
+                                     for i, error in enumerate(sentences_errors) 
+                                     if mask_sentences_tag[sentences_indeces_sorted[i]]])
+        sentences_indeces_sorted = np.array([sentence_id 
+                                             for sentence_id in sentences_indeces_sorted 
+                                             if mask_sentences_tag[sentence_id]])
+
     # Ordered dict which contains the sentences (represented as integer id), with also the corresponding error, 
     # sorted by relative error
     worst_sentences_dict = OrderedDict(zip(sentences_indeces_sorted, sentences_errors))
@@ -392,17 +447,22 @@ def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pre
         sentences_indeces_sorted, sentences_errors = sentences_indeces_sorted[:k], sentences_errors[:k]
 
         # Print the legend
-        right_color = Fore.GREEN  # Color for the correctly classified word
-        noEvaluate_color = Style.RESET_ALL  # Color for the non-evaluation word
-        wrong_color = Fore.RED  # Color for the misclassified word
-        print('LEGEND')
-        print(f'\t {right_color}word{Style.RESET_ALL}: correctly classified word')
-        print(f'\t {wrong_color}word[TRUE_TAG/WRONG_TAG]{Style.RESET_ALL}: misclassified word')
-        print(f'\t {noEvaluate_color}word{Style.RESET_ALL}: non-evaluated word (i.e. punctuation)')
-        print()
+        if legend:
+            right_color = Fore.GREEN  # Color for the correctly classified word
+            noEvaluate_color = Style.RESET_ALL  # Color for the non-evaluation word
+            wrong_color = Fore.RED  # Color for the misclassified word
+            print('LEGEND')
+            print(f'\t {right_color}word{Style.RESET_ALL}: correctly classified word')
+            print(f'\t {wrong_color}word[TRUE_TAG/WRONG_TAG]{Style.RESET_ALL}: misclassified word')
+            if tag is not None or token is not None:
+                wrong_color_ofInterest = Fore.YELLOW
+                suffix_str = 'token of interest' if token is not None else 'tag of interest'
+                print(f'\t {wrong_color_ofInterest}word[TRUE_TAG/WRONG_TAG]{Style.RESET_ALL}: misclassified {suffix_str}')
+            print(f'\t {noEvaluate_color}word{Style.RESET_ALL}: non-evaluated word (i.e. punctuation)')
+            print()
 
         # Iterate across all sentences
-        for i in range(k):
+        for i in range(len(sentences_indeces_sorted)):
             # Print each sentence, underlying the misclassified tokens
             sentence_index = sentences_indeces_sorted[i]
             error = sentences_errors[i]
@@ -417,8 +477,56 @@ def wrongly_classified_sentences_analysis(x : np.array, y_true : np.array, y_pre
                                                             sentence_mask_wrongClass=mask_wrongClass[sentence_index], 
                                                             sentence_y_pred=y_pred[sentence_index],
                                                             sentence_y_true=y_true[sentence_index], 
-                                                            vocabulary_labels=vocabulary_labels)
+                                                            vocabulary_labels=vocabulary_labels,
+                                                            token=token, tag=tag)
             print(sentence_string)
             print()
 
     return worst_sentences_dict
+
+
+
+def plot_confusion_matrix(y_true : np.array, y_pred : np.array, tags : List[str], tags_no_evaluate : List[str], vocabulary_labels: np.ndarray,
+                          normalize: str = 'true') -> None:
+    """Plot the confusion matrix
+
+    Parameters
+    ----------
+    y_true : np.array
+        Two-dimensional array, containing the true POS tags (axis 0 : sentences; axis 1 : tokens)
+    y_pred : np.array
+        Two-dimensional array, containing the predicted POS tags (axis 0 : sentences; axis 1 : tokens)
+    tags : List[str]
+        List of POS tags to show in the confusion matrix: all the other tags are grouped into the 'else' special tag.
+    tags_no_evaluate : List[str]
+        List of POS tags to not consider in the evaluation
+    vocabulary_labels : np.array
+        Array of strings, representing the mapping from integer ids to POS tags.
+    normalize : str, optional
+        How the values in the confusion matrix should be normalized, by default 'true'
+
+    """
+    # Mask out punctuation and padding
+    y_true, y_pred = _mask_tags_no_evaluate(y_true, y_pred, tags_no_evaluate, vocabulary_labels)
+
+    # Keep only the tags if interest, and group the others into the 'else' tag
+    tag2int = {tag:i for i,tag in enumerate(vocabulary_labels)}
+    ids_tags = [tag2int[tag] for tag in tags]
+    else_tag_id = len(vocabulary_labels)
+    def f(v):
+        return v in ids_tags
+    mask_y_true = np.vectorize(f)(y_true)
+    y_true[~mask_y_true] = else_tag_id
+    mask_y_pred = np.vectorize(f)(y_pred)
+    y_pred[~mask_y_pred] = else_tag_id
+    tags += ['else']
+    ids_tags += [else_tag_id]
+   
+    fig, ax = plt.subplots(figsize=(15,15))
+    confusion_matrix = ConfusionMatrixDisplay.from_predictions(y_true, y_pred, display_labels=tags, labels=ids_tags,
+                                                               normalize=normalize, cmap=plt.cm.Blues, values_format=".2f",
+                                                               ax=ax)
+
+    confusion_matrix.ax_.get_images()[0].set_clim(0, 1)
+
+    plt.show()
