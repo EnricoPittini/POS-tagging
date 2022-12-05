@@ -46,7 +46,7 @@ def _loss_function(weights, weights_t, bias, bias_t, co_occurence_matrix):
 
 
 def _train_oov_terms(embedding_model, co_occurrence_matrix, vocabulary : np.ndarray, previous_vocabulary : np.ndarray = None,
-                     previous_trained_parameters_dict : dict = None, n_epochs = 100, device='cpu'):
+                     previous_trained_parameters_dict : dict = None, n_epochs = 100, device='cpu', adam_slow_start=0.5):
 
 
     n_tokens = len(vocabulary)
@@ -63,18 +63,43 @@ def _train_oov_terms(embedding_model, co_occurrence_matrix, vocabulary : np.ndar
     weights_t = torch.randn((n_tokens, embedding_size), requires_grad=True, device=device)
     bias_t = torch.randn((n_tokens, ), requires_grad=True, device=device)
 
+
+    # Set optimizer
+    optimizer=torch.optim.Adam([weights, weights_t, bias, bias_t], lr=1)
+
     if previous_vocabulary is not None:
         previous_int2token, previous_token2int = _get_vocabulary_dictionaries(previous_vocabulary)
         previous_weights, previous_weights_t, previous_bias, previous_bias_t = (previous_trained_parameters_dict['weights'], 
                                                                                 previous_trained_parameters_dict['weights_t'], 
                                                                                 previous_trained_parameters_dict['bias'], 
                                                                                 previous_trained_parameters_dict['bias_t'])
-        previous2new = OrderedDict({i_previous:token2int[token_previous] for i_previous, token_previous in previous_int2token.items()})
-        with torch.no_grad():   
-            weights[list(previous2new.values()), :] = previous_weights[list(previous2new.keys()),:]
-            weights_t[list(previous2new.values()), :] = previous_weights_t[list(previous2new.keys()),:]
-            bias[list(previous2new.values())] = previous_bias[list(previous2new.keys())]
-            bias_t[list(previous2new.values())] = previous_bias_t[list(previous2new.keys())]
+
+        indices=np.array([token2int[word] for word in previous_vocabulary])
+
+        with torch.no_grad():
+            weights[indices] = previous_weights
+            weights_t[indices] = previous_weights_t
+            bias[indices] = previous_bias
+            bias_t[indices] = previous_bias_t
+
+        dict = previous_trained_parameters_dict['optim'].state_dict()
+
+        for (i, token) in dict['state'].items():
+            
+            if len(token['exp_avg'].shape)==2:
+                exp_average=torch.zeros((n_tokens, embedding_size), device=device)
+                exp_avg_sq=torch.zeros((n_tokens, embedding_size), device=device) + adam_slow_start
+            else:
+                exp_average=torch.zeros((n_tokens,),device=device)
+                exp_avg_sq=torch.zeros((n_tokens,),device=device) + adam_slow_start
+
+            exp_average[indices]=token['exp_avg']
+            exp_avg_sq[indices]=token['exp_avg_sq']
+            
+            dict['state'][i]['exp_avg']=exp_average
+            dict['state'][i]['exp_avg_sq']=exp_avg_sq
+            
+        optimizer.load_state_dict(dict)
 
     co_occurrence_matrix=torch.tensor(co_occurrence_matrix, dtype=torch.int64, device=device)
 
@@ -87,9 +112,6 @@ def _train_oov_terms(embedding_model, co_occurrence_matrix, vocabulary : np.ndar
     mask[knownIndices[knownIndices != -1]] = 0
     k_embedding[knownIndices[knownIndices != -1]] = knownEmbeddings.clone().detach()
 
-
-    # Set optimizer
-    optimizer=torch.optim.Adam([weights, weights_t, bias, bias_t], lr=1)
 
     losses = []
 
@@ -116,13 +138,19 @@ def _train_oov_terms(embedding_model, co_occurrence_matrix, vocabulary : np.ndar
     if knownIndices is not None:
         weights_T=mask*weights_t + (1-mask)* (k_embedding-weights)
 
-    trained_parameters_dict = {'weights': weights, 'weights_t': weights_T, 'bias': bias, 'bias_t':bias_t}
+    trained_parameters_dict = {'weights': weights, 'weights_t': weights_T, 'bias': bias, 'bias_t':bias_t, 'optim': optimizer}
 
     return (weights+weights_T).detach().cpu().numpy(), losses, trained_parameters_dict
 
 
-def extend_embedding_model(embedding_model : Dict[str, np.array], texts: List[List[str]], previous_vocabulary : np.ndarray = None,
-                           previous_trained_parameters_dict : dict = None, window_size : int = 5,  n_epochs : int = 100, device : str = 'cpu'):
+def extend_embedding_model( embedding_model : Dict[str, np.array], 
+                            texts: List[List[str]], 
+                            previous_vocabulary : np.ndarray = None,
+                            previous_trained_parameters_dict : dict = None, 
+                            window_size : int = 5,  
+                            n_epochs : int = 100, 
+                            device : str = 'cpu'):
+
     if (previous_vocabulary is not None and previous_trained_parameters_dict is None) or (previous_vocabulary is None and previous_trained_parameters_dict is not None):
         raise ValueError('`previous_vocabulary` and `previous_trained_parameters_dict` must be either both None or not None')
 
