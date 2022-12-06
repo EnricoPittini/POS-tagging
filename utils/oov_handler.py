@@ -159,7 +159,7 @@ def _train_oov_terms(embedding_model : Dict[str,np.ndarray], co_occurrence_matri
     bias_t = torch.randn((n_tokens, ), requires_grad=True, device=device)
 
     # Set optimizer
-    optimizer=torch.optim.Adam([weights, weights_t, bias, bias_t], lr=1)
+    optimizer=torch.optim.Adam([weights, weights_t, bias, bias_t], lr=1e-1)
 
     if previous_vocabulary is not None:
         # If `previous_vocabulary` and `previous_trained_parameters_dict` are specified, we have to inject into the 
@@ -182,7 +182,7 @@ def _train_oov_terms(embedding_model : Dict[str,np.ndarray], co_occurrence_matri
             bias_t[indices] = previous_bias_t
 
         # Injecting the state dict of the optimizer
-        adam_slow_start = 0
+        adam_slow_start = 0.5
         dict = previous_trained_parameters_dict['optim'].state_dict()
         for (i, token) in dict['state'].items():          
             if len(token['exp_avg'].shape)==2:
