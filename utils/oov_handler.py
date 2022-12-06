@@ -85,7 +85,7 @@ def _train_oov_terms(embedding_model : Dict[str,np.ndarray], co_occurrence_matri
 
     The OOV words are the words present in the texts, i.e. present in `co_occurrence_matrix`, but not in `embedding_model`.
 
-    The OOV words embeddings are first initialized as random, and then are trained, using the GloVe procedure. As described
+    The OOV words embeddings are first initialized as random, then are trained, using the GloVe procedure. As described
     in the GloVe paper, this training is based on using the matrices of weigths $W$ and $\tilde{W}$ and the vectors of biases
     $b$ and $\tilde{b}$. In the end of the training, the embedding matrix is the elment-wise sum $W+\tilde{W}$.
 
@@ -96,10 +96,10 @@ def _train_oov_terms(embedding_model : Dict[str,np.ndarray], co_occurrence_matri
     performed.
     1. First of all, the OOV words of the training set are trained.
     2. Then, the OOV words of the validation set are trained. The parameters $W$, $\tilde{W}$, $b$ and $\tilde{b} returned by
-    the previous call are used for initiliazing the same parameters of this current call. In other words, the parameters of
+    the previous call are used to initialize the same parameters of this current call. In other words, the parameters of
     the OOV words are initialized as random, while the known tokens are initialized using the final values of the previous call.
     3. Finally, the OOV words of the test set are trained. As just explained, also here the parameters returned by the 
-    previous call are used for initializing the parameters of this current call.    
+    previous call are used to initialize the parameters of this current call.    
 
     Parameters
     ----------
