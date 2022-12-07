@@ -29,7 +29,7 @@ def _get_vocabulary_dictionaries(vocabulary: np.ndarray):
 def _get_co_occurrence_matrix(vocabulary: np.ndarray, texts: List[List[str]], window_size: int = 5) -> np.ndarray:
     """Return the co-occurence matrix built from the given texts.
 
-    The co-occurence matrix is a term-term matrix, containing the co-occurance counts between each pair of tokens.
+    The co-occurence matrix is a term-term matrix, containing the co-occurence counts between each pair of tokens.
 
     Parameters
     ----------
@@ -38,7 +38,7 @@ def _get_co_occurrence_matrix(vocabulary: np.ndarray, texts: List[List[str]], wi
     texts : List[List[str]]
         Each list is a sentence, represented as a list of words/strings.
     window_size : int, optional
-        Size of the window, used for counting the co-occurances of the tokens, by default 5
+        Size of the window, used for counting the co-occurences of the tokens, by default 5
 
     Returns
     -------
@@ -272,7 +272,7 @@ def extend_embedding_model( embedding_model : Dict[str, np.array],
         By default None, meaning that no previous call has been performed (i.e. we are training the OOV words of the training
         set).
     window_size : int, optional
-        Size of the window, used for counting the co-occurances of the tokens, by default 5
+        Size of the window, used for counting the co-occurences of the tokens, by default 5
     n_epochs : int, optional
         Number of training epochs, by default 100
     device : str, optional
@@ -301,9 +301,9 @@ def extend_embedding_model( embedding_model : Dict[str, np.array],
     vocabulary, _ = create_vocabulary(texts, add_padding_token=False)
     int2token = {i:token for i, token in enumerate(vocabulary)}
 
-    print('Building co-occurence matrix...')
+    print('Building co-occurrence matrix...')
     co_occurrence_matrix = _get_co_occurrence_matrix(vocabulary, texts, window_size=window_size)
-    print('Co-occurence matrix shape:', co_occurrence_matrix.shape)
+    print('Co-occurrence matrix shape:', co_occurrence_matrix.shape)
     print()
 
     print('Training OOV words...')
